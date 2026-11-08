@@ -1,0 +1,12 @@
+{
+  "name": "zjh-relay",
+  "version": "1.0.0",
+  "description": "炸金花联机 · 中转服务器（零依赖）",
+  "main": "relay-server.cjs",
+  "scripts": {
+    "start": "node relay-server.cjs"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}

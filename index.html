@@ -1,0 +1,474 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>炸金花 · 好友联机（中转版）</title>
+<style>
+  :root{ --green:#0f5132; --green2:#1d6b46; --card:#fff; --bg:#0c241a; }
+  *{box-sizing:border-box; -webkit-tap-highlight-color:transparent;}
+  body{margin:0;font-family:-apple-system,system-ui,"PingFang SC","Microsoft YaHei",sans-serif;background:radial-gradient(circle at 50% 0%,#11402c,#061a12);color:#eaf3ee;min-height:100vh;}
+  .wrap{max-width:760px;margin:0 auto;padding:16px 14px 60px;}
+  h1{font-size:22px;text-align:center;margin:6px 0 14px;color:#fff;letter-spacing:1px;}
+  .panel{background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12);border-radius:14px;padding:16px;margin-bottom:14px;}
+  .btn{display:block;width:100%;border:none;border-radius:10px;padding:14px;font-size:16px;font-weight:700;cursor:pointer;margin:8px 0;color:#fff;background:var(--green2);transition:.15s;}
+  .btn:active{transform:scale(.98);}
+  .btn-blue{background:#2563eb;} .btn-primary{background:#d9480f;} .btn-ghost{background:rgba(255,255,255,.12);}
+  .btn:disabled{opacity:.4;}
+  .row{display:flex;gap:10px;} .row .btn{flex:1;}
+  .field{margin:10px 0;}
+  .field label{font-size:13px;color:#a8c4b6;display:block;margin-bottom:5px;}
+  .field input,.field select{width:100%;padding:12px;border-radius:10px;border:1px solid rgba(255,255,255,.2);background:rgba(0,0,0,.25);color:#fff;font-size:15px;}
+  .linkbox{background:rgba(0,0,0,.3);border-radius:8px;padding:10px;font-size:13px;word-break:break-all;color:#9fe6c0;}
+  .roomcode{font-size:38px;font-weight:800;letter-spacing:8px;text-align:center;color:#ffd86b;background:rgba(0,0,0,.25);border-radius:10px;padding:10px;margin:8px 0;}
+  .players{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px;}
+  .pcard{background:rgba(0,0,0,.28);border-radius:10px;padding:10px;font-size:13px;position:relative;}
+  .pcard.turn{outline:2px solid #ffd86b;box-shadow:0 0 14px rgba(255,216,107,.4);}
+  .pcard.folded{opacity:.45;}
+  .pcard .nm{font-weight:700;font-size:14px;}
+  .pcard .ch{color:#ffd86b;font-weight:700;}
+  .cards{display:flex;gap:4px;margin-top:6px;}
+  .card{width:38px;height:54px;background:#fff;border-radius:6px;color:#222;display:flex;flex-direction:column;align-items:center;justify-content:center;font-weight:800;font-size:15px;box-shadow:0 2px 4px rgba(0,0,0,.3);}
+  .card.red{color:#d12b2b;} .card .suit{font-size:13px;}
+  .controls{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px;}
+  .controls .btn{margin:0;flex:1;min-width:90px;}
+  .betinput{display:flex;align-items:center;gap:6px;background:rgba(0,0,0,.25);border-radius:10px;padding:6px 10px;}
+  .betinput input{width:70px;background:transparent;border:none;color:#fff;font-size:16px;text-align:center;}
+  .log{background:rgba(0,0,0,.25);border-radius:10px;padding:10px;font-size:12px;line-height:1.7;max-height:140px;overflow-y:auto;color:#bfe2d2;}
+  .log .hl{color:#ffd86b;font-weight:700;}
+  .chat{background:rgba(0,0,0,.25);border-radius:10px;padding:8px;height:150px;overflow-y:auto;font-size:13px;}
+  .chat div{margin:3px 0;} .chat b{color:#9fe6c0;}
+  .chatbox{display:flex;gap:6px;margin-top:8px;}
+  .chatbox input{flex:1;padding:10px;border-radius:8px;border:1px solid rgba(255,255,255,.2);background:rgba(0,0,0,.25);color:#fff;}
+  .toast{position:fixed;left:50%;top:20px;transform:translateX(-50%);background:rgba(0,0,0,.85);color:#fff;padding:10px 18px;border-radius:20px;font-size:14px;opacity:0;pointer-events:none;transition:.25s;z-index:200;}
+  .toast.show{opacity:1;}
+  .hidden{display:none!important;}
+  .modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.55);display:flex;align-items:center;justify-content:center;z-index:100;padding:16px;}
+  .modal{background:#fff;color:#1c2b24;border-radius:16px;width:100%;max-width:420px;max-height:90vh;overflow-y:auto;}
+  .modal-head{display:flex;justify-content:space-between;align-items:center;padding:14px 16px;border-bottom:1px solid #eee;font-weight:700;color:#1d6b46;font-size:16px;}
+  .modal-close{border:none;background:#eee;color:#445;width:30px;height:30px;border-radius:50%;font-size:15px;cursor:pointer;}
+  .modal-body{padding:16px;}
+  .invite-code{font-size:34px;font-weight:800;color:#1d6b46;letter-spacing:6px;text-align:center;background:#f4f8f6;border-radius:10px;padding:8px;}
+  .invite-qr{display:flex;justify-content:center;margin:10px 0;}
+  .invite-steps{font-size:13px;color:#3a4a42;background:#fafcfa;border:1px solid #eef3f0;border-radius:10px;padding:10px 12px;}
+  .invite-steps ol{margin:6px 0;padding-left:20px;line-height:1.7;}
+  .invite-tip{color:#b9691f;font-size:12px;margin-top:6px;line-height:1.6;}
+  .statusline{text-align:center;font-size:12px;color:#9fe6c0;margin-top:6px;}
+  @media(max-width:560px){ .card{width:34px;height:48px;font-size:13px;} .roomcode{font-size:30px;letter-spacing:5px;} }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>🃏 炸金花 · 好友联机</h1>
+
+  <!-- 落地页 -->
+  <div id="landing">
+    <div class="panel">
+      <div class="field"><label>你的昵称</label><input id="name" maxlength="12" placeholder="输入昵称"></div>
+      <button class="btn btn-primary" id="createBtn">创建房间（当房主）</button>
+      <div class="row">
+        <input id="joinCode" maxlength="6" placeholder="输入6位房间号" style="flex:1;padding:14px;border-radius:10px;border:1px solid rgba(255,255,255,.2);background:rgba(0,0,0,.25);color:#fff;font-size:16px;text-transform:uppercase;">
+        <button class="btn btn-blue" id="joinBtn" style="flex:0 0 40%;margin:0;">加入房间</button>
+      </div>
+      <div class="statusline" id="netStatus"></div>
+    </div>
+    <div class="panel" style="background:rgba(255,255,255,.06);">
+      <strong style="color:#ffd86b;">🤝 怎么和外地好友一起玩？</strong>
+      <ol style="margin:8px 0 0;padding-left:20px;line-height:1.8;font-size:13px;">
+        <li>你点「创建房间」→ 拿到 <b>房间号</b> 和邀请链接。</li>
+        <li>点「📨 邀请好友」把链接/房间号发给好友（微信/QQ 直接转发）。</li>
+        <li>好友打开链接 → 填昵称 → 点「加入房间」。</li>
+        <li>人齐后你（房主）点「开始游戏 ▶」，积分自动结算。</li>
+      </ol>
+      <div style="font-size:12px;color:#ffb86b;margin-top:8px;line-height:1.6;">💡 本游戏通过中转服务器联机，只要能上网就能连（不挑手机/宽带/异地）。房间号即房间地址，请保管好。</div>
+    </div>
+  </div>
+
+  <!-- 大厅 -->
+  <div id="lobby" class="hidden">
+    <div class="panel">
+      <div style="font-size:13px;color:#a8c4b6;">房间号（好友输入此号或点链接加入）</div>
+      <div class="roomcode" id="roomCode">------</div>
+      <div style="font-size:13px;color:#a8c4b6;">邀请链接</div>
+      <div class="linkbox" id="inviteLink">-</div>
+      <div class="row" style="margin-top:6px;">
+        <button class="btn btn-ghost" id="copyBtn">复制链接</button>
+        <button class="btn btn-blue" id="inviteBtn">📨 邀请好友</button>
+      </div>
+      <hr style="border-color:rgba(255,255,255,.1);margin:14px 0;">
+      <div class="field"><label>本局开始积分（点「开始游戏」后对所有人生效）</label><input id="cfgChips" type="number" value="1000" min="100" step="100"></div>
+      <div class="field"><label>底注</label><input id="cfgAnte" type="number" value="20" min="1" step="5"></div>
+      <div class="field"><label><input type="checkbox" id="cfgLooked" checked> 看牌下注翻倍（标准规则）</label></div>
+      <div style="font-size:13px;color:#a8c4b6;margin:6px 0;">已进房玩家</div>
+      <div class="players" id="lobbyList"></div>
+      <button class="btn btn-primary" id="startBtn" style="margin-top:12px;">开始游戏 ▶</button>
+      <div class="statusline" id="netStatus2"></div>
+    </div>
+  </div>
+
+  <!-- 游戏 -->
+  <div id="game" class="hidden">
+    <div class="panel">
+      <div style="display:flex;justify-content:space-between;font-size:13px;color:#a8c4b6;">
+        <span>底池：<b id="pot" style="color:#ffd86b;">0</b></span>
+        <span>当前单注(盲)：<b id="curBet" style="color:#ffd86b;">0</b></span>
+        <span>房间：<b id="gRoom">-</b></span>
+      </div>
+      <div id="connStatus" style="font-size:12px;color:#6ee7a8;margin-top:4px;">🟢 连接正常</div>
+      <div class="players" id="playerList" style="margin-top:10px;"></div>
+      <div class="controls" id="controls"></div>
+      <div class="row" id="hostBar" style="margin-top:8px;"></div>
+    </div>
+    <div class="panel">
+      <div style="font-size:13px;color:#a8c4b6;margin-bottom:6px;">房间聊天</div>
+      <div class="chat" id="chat"></div>
+      <div class="chatbox"><input id="chatInput" placeholder="说点什么…" maxlength="120"><button class="btn btn-ghost" id="chatBtn" style="margin:0;flex:0 0 70px;">发送</button></div>
+    </div>
+    <div class="panel">
+      <div style="font-size:13px;color:#a8c4b6;margin-bottom:6px;">牌局记录</div>
+      <div class="log" id="log"></div>
+      <button class="btn btn-ghost hidden" id="newHandBtn" style="margin-top:10px;">下一手 ▶</button>
+    </div>
+  </div>
+
+  <div class="toast" id="toast"></div>
+
+  <!-- 邀请弹窗 -->
+  <div class="modal-overlay hidden" id="inviteModal">
+    <div class="modal">
+      <div class="modal-head"><span>📨 邀请好友一起玩</span><button class="modal-close" id="inviteClose">✕</button></div>
+      <div class="modal-body">
+        <div style="font-size:13px;color:#6b7d72;margin-bottom:4px;">房间号</div>
+        <div class="invite-code" id="inviteCode">------</div>
+        <div style="font-size:13px;color:#6b7d72;margin:10px 0 4px;">邀请链接</div>
+        <div class="linkbox" id="inviteLink2" style="color:#1d6b46;"></div>
+        <div class="row" style="margin-top:8px;">
+          <button class="btn btn-primary" id="shareBtn">分享给好友（微信/QQ）</button>
+          <button class="btn btn-ghost" id="copyBtn2">复制链接</button>
+        </div>
+        <div class="invite-qr" id="inviteQr"></div>
+        <div class="invite-steps">
+          <strong>好友怎么加入：</strong>
+          <ol><li>把房间号或链接发给好友。</li><li>好友打开链接 → 填昵称 → 点「加入房间」。</li><li>人齐后房主点「开始游戏 ▶」。</li></ol>
+          <div class="invite-tip">💡 链接就是本服务器地址 + 房间号，好友打开即可加入。</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- 本盘结算 / 积分排行 -->
+<div id="results" class="hidden">
+  <div class="panel">
+    <h2 style="text-align:center;color:#ffd86b;margin-top:0;">🏆 本盘积分排行</h2>
+    <div class="players" id="rankList" style="margin-top:10px;"></div>
+    <div class="row" id="resultHostBar" style="margin-top:12px;"></div>
+  </div>
+</div>
+
+<!-- 再来一局邀请弹窗 -->
+<div class="modal-overlay hidden" id="againModal">
+  <div class="modal">
+    <div class="modal-head"><span>🔄 房主邀请再来一局</span></div>
+    <div class="modal-body" style="text-align:center;">
+      <p style="font-size:15px;color:#1c2b24;margin:4px 0 14px;">房主发起新一局，要不要继续一起玩？</p>
+      <div class="row">
+        <button class="btn btn-primary" id="againAgree">同意继续</button>
+        <button class="btn btn-ghost" id="againRefuse">拒绝退出</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+/* ===================== 牌型核心 ===================== */
+const SUIT_RANK={S:4,H:3,C:2,D:1}, SUIT_SYM={S:'♠',H:'♥',C:'♣',D:'♦'}, SUIT_RED={S:false,H:true,C:false,D:true};
+const VAL_TXT={11:'J',12:'Q',13:'K',14:'A'};
+function vtxt(v){ return VAL_TXT[v]||String(v); }
+function makeDeck(){ const d=[]; for(const s of['S','H','C','D']) for(let v=2;v<=14;v++) d.push({v,s}); return d; }
+function shuffle(a){ for(let i=a.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [a[i],a[j]]=[a[j],a[i]]; } return a; }
+function evaluate(cards){
+  const suits=cards.map(c=>c.s), vals=cards.map(c=>c.v).sort((a,b)=>b-a);
+  const sameSuit=suits[0]===suits[1]&&suits[1]===suits[2];
+  const isLeopard=vals[0]===vals[1]&&vals[1]===vals[2];
+  const uniq=[...new Set(vals)].sort((a,b)=>a-b); let straightHigh=0;
+  if(uniq.length===3){ if(uniq[2]-uniq[1]===1&&uniq[1]-uniq[0]===1) straightHigh=uniq[2]; else if(uniq[0]===2&&uniq[1]===3&&uniq[2]===14) straightHigh=3; }
+  let category,label,cmp;
+  if(isLeopard){category=6;label='豹子';cmp=[vals[0]];}
+  else if(sameSuit&&straightHigh){category=5;label='同花顺';cmp=[straightHigh];}
+  else if(sameSuit){category=4;label='同花';cmp=vals.slice();}
+  else if(straightHigh){category=3;label='顺子';cmp=[straightHigh];}
+  else if(uniq.length===2){ const pairVal=(vals[0]===vals[1])?vals[0]:vals[2]; const kicker=(vals[0]===vals[1])?vals[2]:vals[0]; category=2;label='对子';cmp=[pairVal,kicker]; }
+  else {category=1;label='单张';cmp=vals.slice();}
+  return {category,label,cmp,cards};
+}
+function compareHands(a,b){
+  if(a.category!==b.category) return a.category-b.category;
+  const n=Math.max(a.cmp.length,b.cmp.length);
+  for(let i=0;i<n;i++){ const x=a.cmp[i]||0,y=b.cmp[i]||0; if(x!==y) return x-y; }
+  const sa=[...a.cards].sort((x,y)=>y.v-x.v), sb=[...b.cards].sort((x,y)=>y.v-x.v);
+  for(let i=0;i<3;i++){ const d=SUIT_RANK[sa[i].s]-SUIT_RANK[sb[i].s]; if(d!==0) return d; }
+  return 0;
+}
+
+/* ===================== 全局状态 ===================== */
+const $=id=>document.getElementById(id);
+let ws=null, myId=null, hostUid=null, isHost=false, roomCode=null, myName=(localStorage.getItem('zjh_name')||'');
+let G=null;          // 房主持有的游戏状态 & 成员
+let members=new Map(); // 成员 uid -> {id,name,chips,conn,connected,out}
+let lastView=null;   // 房客收到的视图
+let respondedAgain=false;
+let myAgainToken=0;
+let reconnectTimer=null, reconnectDelay=800, connecting=false;
+let pendingRole=null, pendingRoom=null;
+if(location.protocol==='file:'){ alert('请通过“服务器地址”打开本页面（直接双击文件无法联机）。\n部署/运行中转服务器后，用其地址访问本页即可。'); }
+$('name').value=myName;
+
+function toast(m,dur){ const t=$('toast'); t.textContent=m; t.classList.add('show'); clearTimeout(toast._t); toast._t=setTimeout(()=>t.classList.remove('show'),dur||1800); }
+function genCode(){ const c='ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; let s=''; for(let i=0;i<6;i++) s+=c[Math.floor(Math.random()*c.length)]; return s; }
+function setConnStatus(text,color){ const el=$('connStatus'); if(el){ el.textContent=text; el.style.color=color||'#6ee7a8'; } }
+
+/* ===================== 房主游戏状态机（权威） ===================== */
+function getPlayer(id){ return G&&G.players?G.players.find(p=>p.id===id):null; }
+function chipsPerUnit(p){ return (G.config.lookedDouble&&p.looked)?2:1; }
+function currentLevel(){ return G&&G.players?Math.max(0,...G.players.map(p=>(p.level||0))):0; }
+function neededChips(p){ const need=currentLevel()-(p.level||0); if(need<=0) return 0; return Math.min(p.chips,Math.max(1,Math.ceil(need*chipsPerUnit(p)))); }
+function commitUnits(p,units){ units=Math.max(0,units); let chips=Math.round(units*chipsPerUnit(p)); chips=Math.min(chips,p.chips); p.chips-=chips; p.bet+=chips; G.pot+=chips; p.level+=(chipsPerUnit(p)>0?chips/chipsPerUnit(p):0); if(p.chips===0)p.allIn=true; const m=members.get(p.id); if(m)m.chips=p.chips; return chips; }
+function logChipTotal(){ const held=[...members.values()].reduce((a,m)=>a+(m.chips||0),0)+(G.departed?Object.values(G.departed).reduce((a,c)=>a+(c||0),0):0); const exp=(G.matchCount||0)*(G.matchStartChips||0); const okk=held===exp; addLog(`📊 积分总校验：在场+离场共 ${held} / 应 ${exp} ${okk?'✓ 守恒':'⚠ 异常'}`,true); }
+function addLog(text,hl){ G.log.push({text,hl:!!hl}); if(G.log.length>80)G.log.shift(); }
+function buildView(member){
+  const held=[...members.values()].reduce((a,m)=>a+(m.chips||0),0)+(G.departed?Object.values(G.departed).reduce((a,c)=>a+(c||0),0):0);
+  const v={type:'state',phase:G.phase,code:G.code,currentBet:currentLevel(),pot:G.pot,turnId:G.turnId,dealerSeat:G.dealerSeat,
+    config:G.config,hostId:G.hostId,winners:G.winners||[],log:G.log,myId:member.id,isHost:(member.id===G.hostId),
+    againReq:!!G.againReq,againPending:G.againPending?[...G.againPending]:[],againToken:G.againToken||0,
+    heldTotal:held,expectedTotal:(G.matchCount||0)*(G.matchStartChips||0),
+    members:[...members.values()].map(m=>({id:m.id,name:m.name,chips:m.chips,connected:m.connected,out:m.out}))};
+  if(G.phase==='betting'&&G.turnId===member.id&&G.players){ const me=getPlayer(member.id); v.needChips=me?neededChips(me):null; } else v.needChips=null;
+  if(G.players){ v.players=G.players.map(p=>{ const own=p.id===member.id; const vis=(own&&p.looked)||p.revealed||['showdown','over','gameover'].includes(G.phase);
+    return {id:p.id,name:p.name,chips:p.chips,folded:p.folded,looked:p.looked,allIn:p.allIn,bet:p.bet,revealed:p.revealed,isTurn:(p.id===G.turnId),isWinner:(G.winners||[]).some(w=>w.name===p.name),cards:vis?p.cards:null,handLabel:vis?(p.handEval?p.handEval.label:''):''}; }); }
+  return v;
+}
+function relaySend(uid,data){ if(ws&&ws.readyState===1) ws.send(JSON.stringify({type:'game',to:String(uid),data})); }
+function broadcast(){ members.forEach(m=>{ if(m.id!==myId) relaySend(m.id,buildView(m)); }); if(G.phase==='lobby'){ renderLobby(); } else { renderHost(); } }
+function renderHost(){ renderGame(buildView(members.get(myId))); }
+
+function dealHand(){
+  let seats=[...members.values()].filter(m=>m.chips>0&&!m.out&&m.connected);
+  if(seats.length<2){ G.phase='gameover'; const champ=[...members.values()].sort((a,b)=>b.chips-a.chips)[0]; addLog(`🎉 游戏结束，冠军：${champ.name}（${champ.chips}）`,true); broadcast(); return; }
+  G.players=seats.map(m=>({id:m.id,name:m.name,chips:m.chips,folded:false,looked:false,allIn:false,level:0,bet:0,revealed:false,cards:null,handEval:null}));
+  const deck=shuffle(makeDeck());
+  G.players.forEach(p=>{ p.cards=[deck.pop(),deck.pop(),deck.pop()]; p.handEval=evaluate(p.cards); });
+  G.players.forEach(p=>{ const post=Math.min(G.config.ante,p.chips); commitUnits(p,post); });
+  G.pot=G.players.reduce((a,p)=>a+p.bet,0);
+  G.raisedThisRound=false; G.roundCount=0; G.playersToAct=new Set(G.players.filter(p=>!p.allIn).map(p=>p.id));
+  G.phase='betting'; G.winners=[]; if(G.dealerSeat==null)G.dealerSeat=-1; G.dealerSeat=(G.dealerSeat+1)%G.players.length; G.turnId=G.players[G.dealerSeat].id;
+  addLog(`—— 新一手，底注 ${G.config.ante}，庄家 ${G.players[G.dealerSeat].name} ——`,true); broadcast(); nextTurn();
+}
+function startNewRound(){ G.raisedThisRound=false; G.roundCount++; G.playersToAct=new Set(G.players.filter(p=>!p.folded&&!p.allIn).map(p=>p.id)); addLog('（新一轮下注）',false); broadcast(); nextTurn(); }
+function nextTurn(){
+  const active=G.players.filter(p=>!p.folded);
+  if(active.length<=1){ endHand(); return; }
+  if(G.playersToAct.size===0){ if(G.raisedThisRound&&G.roundCount<8) startNewRound(); else showdown(); return; }
+  const idx=G.players.findIndex(p=>p.id===G.turnId); let i=idx;
+  for(let k=0;k<G.players.length;k++){ i=(i+1)%G.players.length; const p=G.players[i]; if(!p.folded&&!p.allIn&&G.playersToAct.has(p.id)){ G.turnId=p.id; break; } }
+  const tp=members.get(G.turnId); if(tp&&tp.id!==myId) relaySend(tp.id,buildView(tp));
+  broadcast();
+}
+function applyAction(p,action){
+  if(G.phase!=='betting') return;
+  if(action.type==='look'){ if(!p.looked){ p.looked=true; addLog(`${p.name} 看牌（此后下注翻倍）`); } broadcast(); return; }
+  if(action.type==='call'){ const need=currentLevel()-(p.level||0); if(need<=0){ addLog(`${p.name} 过牌`); } else { const add=commitUnits(p,need); addLog(`${p.name} 跟注 ${add}${p.allIn?'（全下）':''}`); } G.playersToAct.delete(p.id); broadcast(); nextTurn(); return; }
+  if(action.type==='raise'){ const ante=G.config.ante; const minAdd=ante; let addChips=Math.max(0,Math.round(action.extra||0)); let addUnits=addChips/chipsPerUnit(p); if(addUnits<minAdd){ if(p.id===myId) toast(`加注至少 +${minAdd} 注（${minAdd*chipsPerUnit(p)} 筹码）`); return; } const maxUnits=p.chips/chipsPerUnit(p); const realAdd=Math.min(addUnits,maxUnits); commitUnits(p,realAdd); G.raisedThisRound=true; addLog(`${p.name} 加注到 ${Math.round(p.level)}${p.looked?'（看牌·双倍）':''}${p.allIn?'（全下）':''}`); G.players.forEach(q=>{ if(!q.folded&&!q.allIn&&q.id!==p.id) G.playersToAct.add(q.id); }); G.playersToAct.delete(p.id); broadcast(); nextTurn(); return; }
+  if(action.type==='fold'){ p.folded=true; addLog(`${p.name} 弃牌`); G.playersToAct.delete(p.id); broadcast(); nextTurn(); return; }
+  if(action.type==='compare'){ const t=getPlayer(action.targetId); if(!t||t.folded||t.id===p.id) return; const need=currentLevel()-(p.level||0); if(need>0) commitUnits(p,need); p.revealed=true; t.revealed=true; const cmp=compareHands(p.handEval,t.handEval); let loser,w; if(cmp>0){w=p;loser=t;} else {w=t;loser=p;} loser.folded=true; addLog(`${p.name} 比牌 ${t.name} → ${w.name} 胜，${loser.name} 出局${cmp===0?'（平局发起方输）':''}`); G.playersToAct.delete(p.id); G.playersToAct.delete(t.id); broadcast(); nextTurn(); return; }
+}
+function showdown(){ if(G.phase!=='betting')return; G.phase='showdown'; G.players.forEach(p=>{ if(!p.folded)p.revealed=true; }); addLog('无人加注，开牌比大小！',true); settle(); }
+function endHand(){ if(G.phase==='over'||G.phase==='gameover')return; G.phase='showdown'; const alive=G.players.filter(p=>!p.folded); if(alive.length===1)alive[0].revealed=true; else G.players.forEach(p=>{ if(!p.folded)p.revealed=true; }); settle(); }
+function settle(){
+  const contrib=G.players.map(p=>p.bet); const levels=[...new Set(contrib.filter(c=>c>0))].sort((a,b)=>a-b); let prev=0; const winners=[];
+  for(let i=0;i<levels.length;i++){ const lvl=levels[i]; const portion=lvl-prev; prev=lvl; const contributors=G.players.filter(p=>p.bet>=lvl); const pot=portion*contributors.length;
+    let eligible=contributors.filter(p=>!p.folded); if(!eligible.length) eligible=G.players.filter(p=>!p.folded); if(!eligible.length) continue;
+    let best=eligible[0],bestE=evaluate(best.cards); const tied=[best];
+    for(const q of eligible){ if(q===best)continue; const eq=evaluate(q.cards); const c=compareHands(eq,bestE); if(c>0){best=q;bestE=eq;tied.length=0;tied.push(q);} else if(c===0)tied.push(q); }
+    const share=Math.floor(pot/tied.length); let left=pot-share*tied.length; tied.forEach((q,idx)=>{ q.chips+=share+(idx===0?left:0); });
+    winners.push(...tied.map(q=>({name:q.name,pot,label:bestE.label,tie:tied.length>1})));
+  }
+  G.players.forEach(p=>{ const m=members.get(p.id); if(m)m.chips=p.chips; });
+  members.forEach(m=>{ if(m.chips<=0)m.out=true; });
+  G.pot=0; G.players.forEach(p=>{p.bet=0;p.level=0;}); G.phase='over'; G.winners=winners;
+  winners.forEach(w=> addLog(`🏆 ${w.name} 赢 ${w.pot}（${w.label}${w.tie?'·均分':''}）`,true));
+  const alive=[...members.values()].filter(m=>m.chips>0&&m.connected);
+  if(alive.length<2){ G.phase='gameover'; const champ=[...members.values()].sort((a,b)=>b.chips-a.chips)[0]; addLog(`🎉 游戏结束，冠军：${champ.name}（${champ.chips}）`,true); logChipTotal(); }
+  broadcast();
+}
+
+/* 房主处理来自房客的消息 */
+function hostHandle(member,msg){
+  const s=G;
+  if(msg.type==='join'){ if(members.size>=8){ relaySend(member.id,{type:'chat',name:'系统',text:'房间已满（最多8人）'}); return; } member.name=(msg.name||'玩家').slice(0,12); broadcast(); relaySend(member.id,buildView(member)); }
+  else if(msg.type==='start'){ if(member.id!==s.hostId) return; const cfg=msg.config||s.config; s.config=cfg; members.forEach(m=>{ m.chips=cfg.startChips; m.out=false; }); s.dealerSeat=-1; s.matchStartChips=cfg.startChips; s.matchCount=members.size; s.departed={}; dealHand(); }
+  else if(msg.type==='action'){ if(s.phase!=='betting'||s.turnId!==member.id) return; const p=getPlayer(member.id); if(!p||p.folded||p.allIn) return; applyAction(p,msg.action); }
+  else if(msg.type==='newhand'){ if(s.phase!=='over') return; if(member.id!==s.hostId) return; dealHand(); }
+  else if(msg.type==='again'){ if(!s.againPending||!s.againPending.has(member.id)) return; s.againPending.delete(member.id); if(msg.agree){ addLog(`✔️ ${(member.name||'玩家')} 同意再来一局`); } else { relaySend(member.id,{type:'kicked',reason:'refuse'}); const nm=member.name; members.delete(member.id); const p=getPlayer(member.id); if(p)p.folded=true; addLog(`🚫 ${nm} 拒绝再来一局，已移出`,true); } if(s.againPending.size===0){ doResetNewGame(); } else { broadcast(); } }
+  else if(msg.type==='chat'){ const text=String(msg.text||'').slice(0,120); if(text) broadcastChat(member.name,text); }
+}
+
+/* ===================== 聊天 ===================== */
+function broadcastChat(name,text){ if(isHost){ members.forEach(m=>{ if(m.id!==myId) relaySend(m.id,{type:'chat',name,text}); }); renderChat(name,text); } else if(hostUid){ relaySend(hostUid,{type:'chat',name,text}); } }
+function renderChat(name,text){ const c=$('chat'); const d=document.createElement('div'); d.innerHTML='<b>'+escapeHtml(name)+'：</b>'+escapeHtml(text); c.appendChild(d); c.scrollTop=c.scrollHeight; }
+function escapeHtml(s){ return s.replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
+
+/* ===================== 中转连接（WebSocket） ===================== */
+function relayUrl(){ return (location.protocol==='https:'?'wss://':'ws://')+location.host; }
+function connectRelay(){
+  if(connecting) return; connecting=true;
+  setConnStatus('🟡 正在连接服务器…','#ffd86b');
+  try{ ws=new WebSocket(relayUrl()); }catch(e){ connecting=false; setConnStatus('🔴 无法连接服务器','#ff8a8a'); scheduleReconnect(); return; }
+  ws.onopen=()=>{ connecting=false; setConnStatus('🟢 已连接服务器'); };
+  ws.onmessage=ev=>{ let m; try{ m=JSON.parse(ev.data); }catch(_){ return; } onRelay(m); };
+  ws.onclose=()=>{ connecting=false; setConnStatus('🔴 与服务器断开，重连中…','#ff8a8a'); scheduleReconnect(); };
+  ws.onerror=()=>{};
+}
+function scheduleReconnect(){
+  if(reconnectTimer) return;
+  reconnectDelay=Math.min(reconnectDelay*1.6, 8000);
+  reconnectTimer=setTimeout(()=>{ reconnectTimer=null; if(pendingRole&&pendingRoom) connectRelay(); }, reconnectDelay);
+}
+function onRelay(m){
+  if(m.type==='welcome'){ myId=m.uid; onWelcome(); return; }
+  if(m.type==='peer-left'){ onPeerLeft(m.uid); return; }
+  if(m.type!=='fwd') return;
+  const data=m.data;
+  if(isHost){
+    if(data.type==='state') return; // 房主不会收到来自房客的 state
+    let member=members.get(m.from);
+    if(!member){ member={id:m.from,name:'玩家',chips:1000,conn:null,connected:true,out:false}; members.set(m.from,member); }
+    member.connected=true;
+    hostHandle(member,data);
+  } else {
+    if(data.type==='state'){ lastView=data; if(data.hostId) hostUid=data.hostId; renderGame(data); }
+    else if(data.type==='chat'){ renderChat(data.name,data.text); }
+    else if(data.type==='kicked'){ try{ws.close();}catch(_){} toast('你已被房主移出房间'); setTimeout(()=>location.reload(),1200); }
+  }
+}
+function onWelcome(){
+  ws.send(JSON.stringify({type:'join', room:pendingRoom, name:myName||(pendingRole==='host'?'房主':'玩家'), isHost: pendingRole==='host'}));
+  if(pendingRole==='host'){ initHostState(pendingRoom); }
+}
+function initHostState(room){
+  roomCode=room; isHost=true;
+  G={phase:'lobby',code:roomCode,config:{startChips:1000,ante:20,lookedDouble:true},hostId:myId,dealerSeat:-1,players:null,log:[],winners:[],departed:{},matchCount:1,matchStartChips:1000};
+  members.clear(); members.set(myId,{id:myId,name:myName||'房主',chips:1000,conn:null,connected:true,out:false});
+  G.againReq=false; G.againPending=null;
+  showLobby(); toast('房间已创建：'+roomCode);
+}
+function onPeerLeft(uid){
+  if(isHost){
+    if(G&&G.againPending&&G.againPending.has(uid)){ G.againPending.delete(uid); if(G.departed!==undefined) G.departed[uid]=members.get(uid)?members.get(uid).chips:0; members.delete(uid); if(G.againPending.size===0){ doResetNewGame(); } else { broadcast(); } return; }
+    const m=members.get(uid); if(m){ m.connected=false; const p=getPlayer(uid); if(p&&!p.allIn&&G&&G.phase==='betting'){ p.folded=true; addLog(`${m.name} 掉线，判弃牌`); nextTurn(); } broadcast(); }
+  } else {
+    if(uid===hostUid){ toast('房主已离开，房间关闭'); setTimeout(()=>location.reload(),1500); }
+  }
+}
+
+/* ===================== UI 渲染 ===================== */
+function showLobby(){ $('landing').classList.add('hidden'); $('game').classList.add('hidden'); $('lobby').classList.remove('hidden');
+  $('roomCode').textContent=roomCode; const link=location.origin+location.pathname+'?room='+roomCode; $('inviteLink').textContent=link; $('inviteCode').textContent=roomCode; $('inviteLink2').textContent=link; renderLobby(); }
+function renderLobby(){ const list=$('lobbyList'); list.innerHTML=''; [...members.values()].forEach(m=>{ const d=document.createElement('div'); d.className='pcard'; let html='<div class="nm">'+escapeHtml(m.name)+(m.id===myId?'（你·房主）':'')+'</div><div class="ch">积分 '+m.chips+'</div>'; if(isHost && m.id!==myId){ html+='<button class="btn btn-ghost" style="margin:6px 0 0;padding:6px;font-size:12px;" data-kick="'+m.id+'">移出房间</button>'; } d.innerHTML=html; list.appendChild(d); }); list.querySelectorAll('[data-kick]').forEach(b=>{ b.onclick=()=>{ const id=b.getAttribute('data-kick'); const nm=(members.get(id)||{}).name||'该玩家'; if(confirm('确定将 '+nm+' 移出房间？')) hostKick(id); }; }); $('startBtn').disabled=members.size<2; }
+function cardHTML(c){ if(!c) return '<div class="card" style="opacity:.35">?</div>'; const red=SUIT_RED[c.s]; return '<div class="card'+(red?' red':'')+'">'+vtxt(c.v)+'<span class="suit">'+SUIT_SYM[c.s]+'</span></div>'; }
+function renderGame(v){
+  if(!v) return;
+  if(v.phase==='gameover'){ showResults(v); return; }
+  $('againModal').classList.add('hidden'); $('results').classList.add('hidden');
+  $('game').classList.remove('hidden'); $('lobby').classList.add('hidden'); $('landing').classList.add('hidden');
+  if(isHost) setConnStatus('🟢 房主·连接正常'); else if(ws&&ws.readyState===1) setConnStatus('🟢 已连接服务器'); else setConnStatus('🔴 连接中断，重连中…','#ff8a8a');
+  $('pot').textContent=v.pot; $('curBet').textContent=v.currentBet; $('gRoom').textContent=v.code;
+  const pl=$('playerList'); pl.innerHTML='';
+  const seatList=(v.phase==='lobby')?(v.members||[]).map(m=>({id:m.id,name:m.name,chips:m.chips,folded:!!m.out})):(v.players||[]);
+  seatList.forEach(p=>{ const d=document.createElement('div'); d.className='pcard'+(p.isTurn?' turn':'')+(p.folded?' folded':''); let cards=''; if(p.cards){ p.cards.forEach(c=>cards+=cardHTML(c)); } else { cards='<div class="card" style="opacity:.35">?</div><div class="card" style="opacity:.35">?</div><div class="card" style="opacity:.35">?</div>'; }
+    d.innerHTML='<div class="nm">'+escapeHtml(p.name)+(p.id===v.myId?'（你）':'')+(p.folded?' ·弃牌':'')+(p.allIn?' ·全下':'')+(!p.looked&&!p.folded?' ·闷牌':(p.looked?' ·已看':''))+(p.isWinner?' 🏆':'')+'</div>'+'<div class="cards">'+cards+'</div>'+'<div class="ch">积分 '+p.chips+' · 下注 '+p.bet+(!p.looked&&!p.folded?' ·闷牌':(p.looked?' ·已看':''))+(p.handLabel?' ·'+p.handLabel:'')+'</div>'; pl.appendChild(d); });
+  const c=$('controls'); c.innerHTML=''; const myTurn=(v.phase==='betting'&&v.turnId===v.myId);
+  if(v.phase==='lobby'){
+    const wait=document.createElement('div'); wait.style.cssText='width:100%;text-align:center;color:#ffd86b;padding:10px;font-weight:700;';
+    wait.textContent=(v.isHost&&seatList.length<2)?'⏳ 等待好友加入（至少 2 人才能开始）…':'⏳ 等待房主开始游戏…'; c.appendChild(wait);
+  } else if(v.phase==='betting'){
+    if(myTurn){
+      const me=v.players.find(p=>p.id===v.myId);
+      if(!me.looked){ const hint=document.createElement('div'); hint.style.cssText='width:100%;text-align:center;color:#ffd86b;font-size:13px;padding:4px 0;'; hint.textContent= v.config.lookedDouble?'🀄 闷牌中（看牌后下注翻倍）':'🀄 闷牌中（还没看牌）'; c.appendChild(hint); }
+      const b1=document.createElement('button'); b1.className='btn btn-ghost';
+      if(!me.looked){ b1.textContent='👀 看牌（闷牌 → 看牌）'; b1.onclick=()=>doAction({type:'look'}); } else { b1.textContent='✅ 已看牌'; b1.disabled=true; }
+      c.appendChild(b1);
+      const b2=document.createElement('button'); b2.className='btn btn-primary'; b2.textContent=v.needChips>0?('跟注 '+v.needChips):'过牌'; b2.onclick=()=>doAction({type:'call'}); c.appendChild(b2);
+      const bi=document.createElement('div'); bi.className='betinput'; bi.innerHTML='<span>加注</span>'; const inp=document.createElement('input'); inp.type='number'; inp.value=(me.looked?2:1)*v.config.ante; inp.min=1; bi.appendChild(inp);
+      const b3=document.createElement('button'); b3.className='btn btn-blue'; b3.textContent='加注'; b3.style.margin='0'; b3.onclick=()=>doAction({type:'raise',extra:parseInt(inp.value)||0}); bi.appendChild(b3); c.appendChild(bi);
+      const others=v.players.filter(p=>p.id!==v.myId&&!p.folded); if(others.length>0){ const sel=document.createElement('select'); others.forEach(p=>{ const o=document.createElement('option'); o.value=p.id; o.textContent='比 '+p.name; sel.appendChild(o); }); const b4=document.createElement('button'); b4.className='btn btn-ghost'; b4.textContent='比牌'; b4.onclick=()=>doAction({type:'compare',targetId:sel.value}); const wrap=document.createElement('div'); wrap.className='betinput'; wrap.appendChild(sel); wrap.appendChild(b4); c.appendChild(wrap); }
+      const b5=document.createElement('button'); b5.className='btn btn-ghost'; b5.textContent='弃牌'; b5.onclick=()=>doAction({type:'fold'}); c.appendChild(b5);
+    } else { const wait=document.createElement('div'); wait.style.cssText='width:100%;text-align:center;color:#9fe6c0;padding:8px;'; wait.textContent=v.players.find(p=>p.id===v.turnId)?('等待 '+v.players.find(p=>p.id===v.turnId).name+' 行动…'):'等待…'; c.appendChild(wait); }
+  } else if(v.phase==='over'){
+    $('newHandBtn').classList.remove('hidden'); $('newHandBtn').textContent='下一手 ▶';
+  } else { $('newHandBtn').classList.add('hidden'); }
+  const hb=$('hostBar'); hb.innerHTML='';
+  if(v.isHost && (v.phase==='betting'||v.phase==='over')){
+    const eb=document.createElement('button'); eb.className='btn btn-ghost'; eb.textContent='🚪 结束本盘游戏'; eb.onclick=hostEndGame; hb.appendChild(eb);
+  }
+  const lg=$('log'); lg.innerHTML=''; (v.log||[]).forEach(l=>{ const d=document.createElement('div'); if(l.hl)d.className='hl'; d.textContent=l.text; lg.appendChild(d); }); lg.scrollTop=lg.scrollHeight;
+}
+function showResults(v){
+  $('game').classList.add('hidden'); $('lobby').classList.add('hidden'); $('landing').classList.add('hidden'); $('results').classList.remove('hidden');
+  const rl=$('rankList'); rl.innerHTML='';
+  const sorted=[...(v.members||[])].sort((a,b)=>b.chips-a.chips);
+  sorted.forEach((m,i)=>{ const medal=['🥇','🥈','🥉'][i]||('第'+(i+1)+'名'); const d=document.createElement('div'); d.className='pcard';
+    let html='<div class="nm">'+medal+' '+escapeHtml(m.name)+(m.id===v.myId?'（你）':'')+'</div><div class="ch">积分 '+m.chips+'</div>';
+    if(v.isHost && m.id!==v.myId){ html+='<button class="btn btn-ghost" style="margin:6px 0 0;padding:6px;font-size:12px;" data-kick="'+m.id+'">移出</button>'; }
+    d.innerHTML=html; rl.appendChild(d); });
+  rl.querySelectorAll('[data-kick]').forEach(b=>{ b.onclick=()=>{ const id=b.getAttribute('data-kick'); const nm=((v.members||[]).find(x=>x.id===id)||{}).name||'该玩家'; if(confirm('确定将 '+nm+' 移出？')) hostKick(id); }; });
+  const totalDiv=document.createElement('div'); totalDiv.style.cssText='text-align:center;color:#9fe6c0;font-size:13px;margin-top:10px;';
+  const held=(v.heldTotal||0), exp=(v.expectedTotal||0);
+  totalDiv.innerHTML='📊 本局积分总和：<b style="color:#ffd86b;">'+held+'</b> / 应 '+exp+' '+(held===exp?'<span style="color:#6ee7a8;">✓ 守恒</span>':'<span style="color:#ff8a8a;">⚠ 异常</span>');
+  rl.appendChild(totalDiv);
+  const hb=$('resultHostBar'); hb.innerHTML='';
+  if(v.isHost){
+    if(v.againReq && v.againPending && v.againPending.length>0){
+      const w=document.createElement('div'); w.style.cssText='width:100%;text-align:center;color:#ffd86b;padding:8px;font-weight:700;'; w.textContent='⏳ 等待 '+v.againPending.length+' 位玩家同意再来一局…'; hb.appendChild(w);
+      const fb=document.createElement('button'); fb.className='btn btn-ghost'; fb.textContent='强制开始（忽略未响应）'; fb.onclick=doResetNewGame; hb.appendChild(fb);
+    } else {
+      const b=document.createElement('button'); b.className='btn btn-primary'; b.textContent='📨 邀请再来一局'; b.onclick=hostPlayAgain; hb.appendChild(b);
+    }
+  } else {
+    const w=document.createElement('div'); w.style.cssText='width:100%;text-align:center;color:#9fe6c0;padding:8px;'; w.textContent='等待房主邀请再来一局…'; hb.appendChild(w);
+    if(v.againReq){ if(v.againToken!==myAgainToken){ myAgainToken=v.againToken; respondedAgain=false; showAgainModal(); } else if(!respondedAgain){ showAgainModal(); } }
+    else { respondedAgain=false; myAgainToken=0; hideAgainModal(); }
+  }
+}
+function doAction(a){ if(isHost){ const p=getPlayer(myId); if(p) applyAction(p,a); } else { if(hostUid&&ws&&ws.readyState===1){ relaySend(hostUid,{type:'action',action:a}); } else { toast('网络未连接，稍候再试'); } } }
+function doNewHand(){ if(isHost){ if(G.phase==='over'){ dealHand(); } else if(G.phase==='gameover'){ members.forEach(m=>{ m.chips=G.config.startChips; m.out=false; }); G.dealerSeat=-1; G.players=null; G.phase='lobby'; broadcast(); } } else if(hostUid&&ws&&ws.readyState===1){ relaySend(hostUid,{type:'newhand'}); } }
+function hostEndGame(){ if(!isHost||!G) return; if(G.phase!=='betting'&&G.phase!=='over') return; G.phase='gameover'; const champ=[...members.values()].sort((a,b)=>b.chips-a.chips)[0]; addLog(`🛑 房主结束本盘游戏。最终冠军：${champ.name}（${champ.chips}）`,true); logChipTotal(); broadcast(); }
+function hostKick(id){ if(!isHost||!G||id===myId) return; const m=members.get(id); if(!m) return; relaySend(id,{type:'kicked'}); if(G.departed!==undefined) G.departed[id]=m.chips; members.delete(id); if(G.againPending) G.againPending.delete(id); const p=getPlayer(id); if(p) p.folded=true; addLog(`🚫 ${m.name} 被房主移出房间（其 ${m.chips} 积分计入总校验）`,true); if(G.againPending && G.againPending.size===0){ doResetNewGame(); } else { broadcast(); } }
+function hostPlayAgain(){ if(!isHost||!G||G.phase!=='gameover') return; const guests=[...members.values()].filter(m=>m.id!==myId&&m.connected); if(guests.length===0){ doResetNewGame(); return; } G.againToken=(G.againToken||0)+1; G.againPending=new Set(guests.map(m=>m.id)); G.againReq=true; addLog('📨 房主邀请再来一局，等待同意…',true); broadcast(); }
+function doResetNewGame(){ if(!isHost||!G) return; G.againReq=false; G.againPending=null; G.againToken=0; members.forEach(m=>{ m.chips=G.config.startChips; m.out=false; }); G.dealerSeat=-1; G.players=null; G.winners=[]; G.matchStartChips=G.config.startChips; G.matchCount=members.size; G.departed={}; G.log=[{text:'—— 新一局开始 ——',hl:true}]; G.phase='lobby'; broadcast(); }
+
+/* ===================== 事件绑定 ===================== */
+$('createBtn').onclick=()=>{ myName=($('name').value||'房主').trim(); if(!myName){ toast('先填个昵称'); return; } localStorage.setItem('zjh_name',myName); pendingRole='host'; pendingRoom=genCode(); connectRelay(); };
+$('joinBtn').onclick=()=>{ myName=($('name').value||'玩家').trim(); if(!myName){ toast('先填个昵称'); return; } localStorage.setItem('zjh_name',myName); const code=($('joinCode').value||'').trim().toUpperCase(); if(!/^[A-Z0-9]{6}$/.test(code)){ toast('房间号是6位'); return; } pendingRole='guest'; pendingRoom=code; connectRelay(); };
+$('startBtn').onclick=()=>{ const cfg={startChips:parseInt($('cfgChips').value)||1000,ante:parseInt($('cfgAnte').value)||20,lookedDouble:$('cfgLooked').checked}; if(isHost){ G.config=cfg; members.forEach(m=>{ m.chips=cfg.startChips; m.out=false; }); G.dealerSeat=-1; G.matchStartChips=cfg.startChips; G.matchCount=members.size; G.departed={}; dealHand(); } };
+$('newHandBtn').onclick=doNewHand;
+$('copyBtn').onclick=()=>{ const l=$('inviteLink').textContent; if(navigator.clipboard) navigator.clipboard.writeText(l).then(()=>toast('链接已复制')).catch(()=>toast(l)); else toast(l); };
+$('inviteBtn').onclick=()=>{ loadQR(()=>showQR($('inviteLink2').textContent)); $('inviteModal').classList.remove('hidden'); };
+$('inviteClose').onclick=()=>$('inviteModal').classList.add('hidden');
+$('inviteModal').addEventListener('click',e=>{ if(e.target===$('inviteModal'))$('inviteModal').classList.add('hidden'); });
+function showAgainModal(){ $('againModal').classList.remove('hidden'); }
+function hideAgainModal(){ $('againModal').classList.add('hidden'); }
+$('againAgree').onclick=()=>{ respondedAgain=true; hideAgainModal(); if(hostUid&&ws&&ws.readyState===1) relaySend(hostUid,{type:'again',agree:true}); toast('已同意，等待房主开始'); };
+$('againRefuse').onclick=()=>{ respondedAgain=true; hideAgainModal(); if(hostUid&&ws&&ws.readyState===1) relaySend(hostUid,{type:'again',agree:false}); toast('你已拒绝，正在退出房间'); };
+$('shareBtn').onclick=()=>{ const l=$('inviteLink2').textContent; const text='【炸金花】房间号 '+roomCode+'，点链接一起玩：'+l; if(navigator.share){ navigator.share({title:'炸金花联机房间',text,url:l}).catch(()=>{}); } else { if(navigator.clipboard) navigator.clipboard.writeText(l).then(()=>toast('链接已复制')).catch(()=>{}); else toast(l); } };
+$('copyBtn2').onclick=()=>{ const l=$('inviteLink2').textContent; if(navigator.clipboard) navigator.clipboard.writeText(l).then(()=>toast('链接已复制')).catch(()=>toast(l)); else toast(l); };
+$('chatBtn').onclick=()=>{ const t=$('chatInput').value.trim(); if(t){ broadcastChat(myName||'我',t); $('chatInput').value=''; } };
+$('chatInput').onkeydown=e=>{ if(e.key==='Enter'){ const t=$('chatInput').value.trim(); if(t){ broadcastChat(myName||'我',t); $('chatInput').value=''; } } };
+function loadQR(cb){ if(window.QRCode){ cb(); return; } const s=document.createElement('script'); s.src='https://cdn.jsdelivr.net/npm/qrcode@1.5.4/build/qrcode.min.js'; s.onload=cb; s.onerror=()=>cb(); document.head.appendChild(s); }
+function showQR(text){ const box=$('inviteQr'); box.innerHTML=''; if(!window.QRCode){ box.innerHTML='<div style="font-size:12px;color:#9aa;">二维码需联网，可直接复制链接</div>'; return; } const c=document.createElement('canvas'); try{ window.QRCode.toCanvas(c,text,{width:160,margin:1},e=>{ if(e)box.innerHTML='二维码生成失败'; }); box.appendChild(c); }catch(e){ box.innerHTML='二维码生成失败'; } }
+/* 若带 ?room= 参数，自动进入加入模式 */
+(function(){ const u=new URL(location.href); const r=(u.searchParams.get('room')||'').toUpperCase(); if(r){ $('joinCode').value=r; $('name').focus(); toast('已填入房间号，填昵称后点加入'); } })();
+$('netStatus').textContent='提示：本页通过中转服务器联机，只要能上网即可（不挑网络）。';
+</script>
+</body>
+</html>
